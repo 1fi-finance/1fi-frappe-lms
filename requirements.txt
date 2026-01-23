@@ -1,0 +1,2 @@
+# Lending app dependencies
+# frappe and erpnext are provided by the base image
