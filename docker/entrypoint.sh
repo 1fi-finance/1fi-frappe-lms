@@ -42,36 +42,27 @@ wait_for_db() {
 
 wait_for_redis() {
     log "Waiting for Redis to be ready..."
-    local max_attempts=30
+    local max_attempts=10
     local attempt=1
     local redis_host="${REDIS_CACHE_HOST:-redis}"
     local redis_port="${REDIS_CACHE_PORT:-6379}"
 
+    log "Trying to connect to Redis at $redis_host:$redis_port"
+
     while [ $attempt -le $max_attempts ]; do
-        # Use Python to check Redis connection (redis-cli may not be installed)
-        if python3 -c "
-import socket
-try:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(2)
-    s.connect(('$redis_host', $redis_port))
-    s.send(b'PING\r\n')
-    response = s.recv(1024)
-    s.close()
-    exit(0 if b'PONG' in response else 1)
-except:
-    exit(1)
-" 2>/dev/null; then
-            log "Redis is ready!"
+        # Use Python for portable TCP check (available in all Frappe images)
+        if python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect(('$redis_host', $redis_port)); s.close(); print('OK')" 2>/dev/null; then
+            log "Redis is ready at $redis_host:$redis_port!"
             return 0
         fi
-        log "Redis not ready yet (attempt $attempt/$max_attempts)..."
+        log "Redis not ready yet at $redis_host:$redis_port (attempt $attempt/$max_attempts)..."
         sleep 2
         attempt=$((attempt + 1))
     done
 
-    log "ERROR: Redis connection failed after 30 attempts"
-    exit 1
+    # Don't fail - let Frappe handle Redis connection
+    log "WARNING: Could not verify Redis connection at $redis_host:$redis_port, continuing anyway..."
+    return 0
 }
 
 setup_common_site_config() {

@@ -24,7 +24,6 @@ services:
         PYTHON_VERSION: "3.11"
         NODE_VERSION: "18"
     image: frappe-lending:latest
-    container_name: frappe-lending
     restart: unless-stopped
     depends_on:
       redis:
@@ -92,7 +91,6 @@ services:
   # NOTE: Comment out this service if using external DATABASE_URL
   db:
     image: postgres:15-alpine
-    container_name: frappe-lending-db
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${DB_USER:-postgres}
@@ -116,7 +114,6 @@ services:
   # ===========================================================================
   redis:
     image: redis:7-alpine
-    container_name: frappe-lending-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
