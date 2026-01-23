@@ -225,7 +225,7 @@ case "$1" in
         fi
 
         # Start supervisor (manages gunicorn, workers, scheduler, socketio)
-        exec /usr/bin/supervisord -c /etc/supervisor/conf.d/frappe.conf -n
+        exec /usr/bin/supervisord -c /home/frappe/supervisord.conf -n
         ;;
 
     "worker")
