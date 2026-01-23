@@ -80,10 +80,14 @@ services:
       # Coolify labels (adjust as needed)
       - "coolify.managed=true"
       - "traefik.enable=true"
-      # HTTPS router
+      # Middleware to preserve Host header
+      - "traefik.http.middlewares.lending-headers.headers.customrequestheaders.X-Forwarded-Host=${SITE_NAME:-lending.localhost}"
+      - "traefik.http.middlewares.lending-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      # HTTPS router with header middleware
       - "traefik.http.routers.lending.rule=Host(`${SITE_NAME:-lending.localhost}`)"
       - "traefik.http.routers.lending.entrypoints=websecure"
       - "traefik.http.routers.lending.tls=true"
+      - "traefik.http.routers.lending.middlewares=lending-headers"
       # HTTP router (redirect to HTTPS)
       - "traefik.http.routers.lending-http.rule=Host(`${SITE_NAME:-lending.localhost}`)"
       - "traefik.http.routers.lending-http.entrypoints=web"
