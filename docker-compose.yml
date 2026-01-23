@@ -80,9 +80,16 @@ services:
       # Coolify labels (adjust as needed)
       - "coolify.managed=true"
       - "traefik.enable=true"
+      # HTTPS router
       - "traefik.http.routers.lending.rule=Host(`${DOMAIN:-lending.localhost}`)"
       - "traefik.http.routers.lending.entrypoints=websecure"
       - "traefik.http.routers.lending.tls=true"
+      # HTTP router (redirect to HTTPS)
+      - "traefik.http.routers.lending-http.rule=Host(`${DOMAIN:-lending.localhost}`)"
+      - "traefik.http.routers.lending-http.entrypoints=web"
+      - "traefik.http.routers.lending-http.middlewares=lending-https-redirect"
+      - "traefik.http.middlewares.lending-https-redirect.redirectscheme.scheme=https"
+      # Service
       - "traefik.http.services.lending.loadbalancer.server.port=8000"
 
   # ===========================================================================
