@@ -24,8 +24,9 @@ RUN git config --global user.name "Frappe Build" \
 # Copy lending app
 COPY --chown=frappe:frappe . /home/frappe/frappe-bench/apps/lending
 
-# Install lending app dependencies and build assets
-RUN bench setup requirements --dev \
+# Install lending app as Python package and build assets
+RUN ./env/bin/pip install -e apps/lending \
+    && echo "lending" >> sites/apps.txt \
     && bench build --production
 
 # =============================================================================
@@ -48,9 +49,17 @@ WORKDIR /home/frappe/frappe-bench
 RUN git config --global user.name "Frappe" \
     && git config --global user.email "frappe@localhost"
 
-# Copy the lending app and built assets from builder
+# Copy the lending app from builder
 COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/apps/lending /home/frappe/frappe-bench/apps/lending
+
+# Copy built assets from builder
 COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/sites/assets /home/frappe/frappe-bench/sites/assets
+
+# Copy apps.txt with lending added
+COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/sites/apps.txt /home/frappe/frappe-bench/sites/apps.txt
+
+# Install lending app as Python package in production image
+RUN ./env/bin/pip install -e apps/lending
 
 # Copy configuration files
 COPY --chown=frappe:frappe docker/supervisord.conf /home/frappe/supervisord.conf
