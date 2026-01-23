@@ -28,7 +28,7 @@ COPY --chown=frappe:frappe . /home/frappe/frappe-bench/apps/lending
 RUN ./env/bin/pip install -e apps/lending
 
 # Clean apps.txt and add only installed apps, then build
-RUN echo -e "frappe\nerpnext\nlending" > sites/apps.txt \
+RUN printf "frappe\nerpnext\nlending\n" > sites/apps.txt \
     && bench build --production
 
 # =============================================================================
