@@ -44,9 +44,24 @@ wait_for_redis() {
     log "Waiting for Redis to be ready..."
     local max_attempts=30
     local attempt=1
+    local redis_host="${REDIS_CACHE_HOST:-redis}"
+    local redis_port="${REDIS_CACHE_PORT:-6379}"
 
     while [ $attempt -le $max_attempts ]; do
-        if redis-cli -h "$REDIS_CACHE_HOST" -p "${REDIS_CACHE_PORT:-6379}" ping > /dev/null 2>&1; then
+        # Use Python to check Redis connection (redis-cli may not be installed)
+        if python3 -c "
+import socket
+try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(2)
+    s.connect(('$redis_host', $redis_port))
+    s.send(b'PING\r\n')
+    response = s.recv(1024)
+    s.close()
+    exit(0 if b'PONG' in response else 1)
+except:
+    exit(1)
+" 2>/dev/null; then
             log "Redis is ready!"
             return 0
         fi
@@ -55,7 +70,7 @@ wait_for_redis() {
         attempt=$((attempt + 1))
     done
 
-    log "ERROR: Redis connection failed after $max_attempts attempts"
+    log "ERROR: Redis connection failed after 30 attempts"
     exit 1
 }
 
