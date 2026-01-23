@@ -24,9 +24,11 @@ RUN git config --global user.name "Frappe Build" \
 # Copy lending app
 COPY --chown=frappe:frappe . /home/frappe/frappe-bench/apps/lending
 
-# Install lending app as Python package and build assets
-RUN ./env/bin/pip install -e apps/lending \
-    && echo "lending" >> sites/apps.txt \
+# Install lending app as Python package
+RUN ./env/bin/pip install -e apps/lending
+
+# Clean apps.txt and add only installed apps, then build
+RUN echo -e "frappe\nerpnext\nlending" > sites/apps.txt \
     && bench build --production
 
 # =============================================================================
