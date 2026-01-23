@@ -71,7 +71,7 @@ services:
     networks:
       - frappe-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/method/ping"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/method/ping" ]
       interval: 60s
       timeout: 30s
       retries: 5
@@ -81,11 +81,11 @@ services:
       - "coolify.managed=true"
       - "traefik.enable=true"
       # HTTPS router
-      - "traefik.http.routers.lending.rule=Host(`${DOMAIN:-lending.localhost}`)"
+      - "traefik.http.routers.lending.rule=Host(`${SITE_NAME:-lending.localhost}`)"
       - "traefik.http.routers.lending.entrypoints=websecure"
       - "traefik.http.routers.lending.tls=true"
       # HTTP router (redirect to HTTPS)
-      - "traefik.http.routers.lending-http.rule=Host(`${DOMAIN:-lending.localhost}`)"
+      - "traefik.http.routers.lending-http.rule=Host(`${SITE_NAME:-lending.localhost}`)"
       - "traefik.http.routers.lending-http.entrypoints=web"
       - "traefik.http.routers.lending-http.middlewares=lending-https-redirect"
       - "traefik.http.middlewares.lending-https-redirect.redirectscheme.scheme=https"
@@ -110,7 +110,7 @@ services:
     networks:
       - frappe-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-lending}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-lending}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -130,7 +130,7 @@ services:
     networks:
       - frappe-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
