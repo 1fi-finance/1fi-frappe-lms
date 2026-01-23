@@ -1,0 +1,103 @@
+# Frappe Lending - Docker Compose with External Database
+# ======================================================
+#
+# Use this file when connecting to an external PostgreSQL database
+# such as Coolify-managed PostgreSQL, AWS RDS, or other cloud databases.
+#
+# Usage:
+#   docker compose -f docker-compose.external-db.yml up -d
+#
+# Required environment variables:
+#   - DATABASE_URL: Full PostgreSQL connection string
+#   - REDIS_URL: Redis connection string (or use built-in Redis)
+
+services:
+  # ===========================================================================
+  # Frappe Lending Application
+  # ===========================================================================
+  lending:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        FRAPPE_BRANCH: version-15
+        ERPNEXT_BRANCH: version-15
+        PAYMENTS_BRANCH: version-15
+    image: frappe-lending:latest
+    container_name: frappe-lending
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${FRAPPE_PORT:-8000}:8000"
+      - "${SOCKETIO_PORT:-9000}:9000"
+    environment:
+      # Site Configuration
+      - SITE_NAME=${SITE_NAME:-lending.localhost}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - DEVELOPER_MODE=${DEVELOPER_MODE:-0}
+
+      # External Database (PostgreSQL connection string)
+      # Format: postgres://user:password@host:port/database
+      - DATABASE_URL=${DATABASE_URL}
+
+      # Redis Configuration (using local Redis container)
+      - REDIS_CACHE_HOST=redis
+      - REDIS_CACHE_PORT=6379
+      - REDIS_QUEUE_HOST=redis
+      - REDIS_QUEUE_PORT=6379
+      - REDIS_SOCKETIO_HOST=redis
+      - REDIS_SOCKETIO_PORT=6379
+
+      # Features
+      - ENABLE_SOCKETIO=${ENABLE_SOCKETIO:-true}
+    volumes:
+      - frappe-sites:/home/frappe/frappe-bench/sites
+      - frappe-logs:/home/frappe/frappe-bench/logs
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/method/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    labels:
+      - "coolify.managed=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.lending.rule=Host(`${DOMAIN:-lending.localhost}`)"
+      - "traefik.http.routers.lending.entrypoints=websecure"
+      - "traefik.http.routers.lending.tls=true"
+      - "traefik.http.services.lending.loadbalancer.server.port=8000"
+
+  # ===========================================================================
+  # Redis (required for Frappe - cache, queue, and socketio)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: frappe-lending-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  frappe-sites:
+    name: frappe-lending-sites
+  frappe-logs:
+    name: frappe-lending-logs
+  redis-data:
+    name: frappe-lending-redis
+
+networks:
+  frappe-network:
+    name: frappe-lending-network
+    driver: bridge

@@ -1,0 +1,153 @@
+# Frappe Lending - Docker Compose for Coolify
+# ============================================
+#
+# This compose file supports two modes:
+# 1. External database: Set DATABASE_URL environment variable
+# 2. Local database: Use the included PostgreSQL & Redis services
+#
+# For Coolify deployment, you can either:
+# - Deploy this entire stack (recommended for isolated deployment)
+# - Use external database by setting DATABASE_URL and removing db service
+
+services:
+  # ===========================================================================
+  # Frappe Lending Application
+  # ===========================================================================
+  lending:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        FRAPPE_BRANCH: version-15
+        ERPNEXT_BRANCH: version-15
+        PAYMENTS_BRANCH: version-15
+        PYTHON_VERSION: "3.11"
+        NODE_VERSION: "18"
+    image: frappe-lending:latest
+    container_name: frappe-lending
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      # Remove db dependency if using external DATABASE_URL
+      db:
+        condition: service_healthy
+    ports:
+      - "${FRAPPE_PORT:-8000}:8000"
+      - "${SOCKETIO_PORT:-9000}:9000"
+    environment:
+      # Site Configuration
+      - SITE_NAME=${SITE_NAME:-lending.localhost}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - DEVELOPER_MODE=${DEVELOPER_MODE:-0}
+
+      # Database Configuration (Option 1: Use DATABASE_URL for external DB)
+      - DATABASE_URL=${DATABASE_URL:-}
+
+      # Database Configuration (Option 2: Use individual vars for local DB)
+      - DB_TYPE=${DB_TYPE:-postgres}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-lending}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-frappe_password}
+      - DB_ROOT_USER=${DB_ROOT_USER:-postgres}
+      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-frappe_password}
+
+      # Redis Configuration
+      - REDIS_CACHE_HOST=${REDIS_CACHE_HOST:-redis}
+      - REDIS_CACHE_PORT=${REDIS_CACHE_PORT:-6379}
+      - REDIS_QUEUE_HOST=${REDIS_QUEUE_HOST:-redis}
+      - REDIS_QUEUE_PORT=${REDIS_QUEUE_PORT:-6379}
+      - REDIS_SOCKETIO_HOST=${REDIS_SOCKETIO_HOST:-redis}
+      - REDIS_SOCKETIO_PORT=${REDIS_SOCKETIO_PORT:-6379}
+
+      # SocketIO toggle
+      - ENABLE_SOCKETIO=${ENABLE_SOCKETIO:-true}
+    volumes:
+      # Persistent storage for sites (IMPORTANT: must persist across restarts)
+      - frappe-sites:/home/frappe/frappe-bench/sites
+      # Logs
+      - frappe-logs:/home/frappe/frappe-bench/logs
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/method/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    labels:
+      # Coolify labels (adjust as needed)
+      - "coolify.managed=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.lending.rule=Host(`${DOMAIN:-lending.localhost}`)"
+      - "traefik.http.routers.lending.entrypoints=websecure"
+      - "traefik.http.routers.lending.tls=true"
+      - "traefik.http.services.lending.loadbalancer.server.port=8000"
+
+  # ===========================================================================
+  # PostgreSQL Database
+  # ===========================================================================
+  # NOTE: Comment out this service if using external DATABASE_URL
+  db:
+    image: postgres:15-alpine
+    container_name: frappe-lending-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-frappe_password}
+      - POSTGRES_DB=${DB_NAME:-lending}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${DB_EXPOSE_PORT:-5432}:5432"
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-lending}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ===========================================================================
+  # Redis (Cache, Queue, SocketIO)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: frappe-lending-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_EXPOSE_PORT:-6379}:6379"
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  frappe-sites:
+    name: frappe-lending-sites
+  frappe-logs:
+    name: frappe-lending-logs
+  postgres-data:
+    name: frappe-lending-postgres
+  redis-data:
+    name: frappe-lending-redis
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  frappe-network:
+    name: frappe-lending-network
+    driver: bridge
