@@ -72,10 +72,10 @@ services:
       - frappe-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/method/ping"]
-      interval: 30s
-      timeout: 10s
+      interval: 60s
+      timeout: 30s
       retries: 5
-      start_period: 120s
+      start_period: 900s
     labels:
       # Coolify labels (adjust as needed)
       - "coolify.managed=true"
