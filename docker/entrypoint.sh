@@ -125,8 +125,7 @@ create_site() {
             --db-password "${DB_PASSWORD}" \
             --db-root-username "${DB_ROOT_USER:-postgres}" \
             --db-root-password "${DB_ROOT_PASSWORD:-$DB_PASSWORD}" \
-            --admin-password "$admin_pass" \
-            --no-mariadb-socket
+            --admin-password "$admin_pass"
     else
         bench new-site "$site_name" \
             --db-host "${DB_HOST:-db}" \
@@ -136,7 +135,7 @@ create_site() {
             --db-root-username "${DB_ROOT_USER:-root}" \
             --db-root-password "${DB_ROOT_PASSWORD:-$DB_PASSWORD}" \
             --admin-password "$admin_pass" \
-            --no-mariadb-socket
+            --mariadb-user-host-login-scope='%'
     fi
 
     log "Site $site_name created successfully"
