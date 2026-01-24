@@ -227,6 +227,15 @@ case "$1" in
             create_site
             install_apps
             run_migrations
+        else
+            log "Site exists, ensuring it's set as default..."
+            bench use "${SITE_NAME:-lending.localhost}"
+        fi
+
+        # Build assets if not present
+        if [ ! -d "sites/assets/frappe/dist" ]; then
+            log "Building assets..."
+            bench build
         fi
 
         # Start supervisor (manages gunicorn, workers, scheduler, socketio)
