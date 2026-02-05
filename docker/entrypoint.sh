@@ -225,8 +225,9 @@ case "$1" in
         # (The Docker volume shadows assets built into the image)
         if [ -d "/home/frappe/assets-backup" ]; then
             log "Restoring built assets into sites volume..."
-            rm -rf sites/assets
-            cp -r /home/frappe/assets-backup sites/assets
+            mkdir -p sites/assets
+            rm -rf sites/assets/*
+            cp -r /home/frappe/assets-backup/* sites/assets/
             log "Assets restored successfully"
         fi
 
