@@ -54,11 +54,10 @@ RUN git config --global user.name "Frappe" \
 # Copy the lending app from builder
 COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/apps/lending /home/frappe/frappe-bench/apps/lending
 
-# Copy built assets from builder
-COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/sites/assets /home/frappe/frappe-bench/sites/assets
-
-# Copy apps.txt with lending added
-COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/sites/apps.txt /home/frappe/frappe-bench/sites/apps.txt
+# Copy built assets to a backup location OUTSIDE sites/ directory
+# (The sites/ dir is volume-mounted at runtime, which shadows image contents)
+COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/sites/assets /home/frappe/assets-backup
+COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench/sites/apps.txt /home/frappe/apps.txt.backup
 
 # Install lending app as Python package in production image
 RUN ./env/bin/pip install -e apps/lending

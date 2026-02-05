@@ -221,6 +221,20 @@ case "$1" in
         wait_for_redis
         setup_common_site_config
 
+        # Always restore built assets from backup into the volume-mounted sites/
+        # (The Docker volume shadows assets built into the image)
+        if [ -d "/home/frappe/assets-backup" ]; then
+            log "Restoring built assets into sites volume..."
+            rm -rf sites/assets
+            cp -r /home/frappe/assets-backup sites/assets
+            log "Assets restored successfully"
+        fi
+
+        # Restore apps.txt if missing
+        if [ -f "/home/frappe/apps.txt.backup" ] && [ ! -f "sites/apps.txt" ]; then
+            cp /home/frappe/apps.txt.backup sites/apps.txt
+        fi
+
         # Check if site exists, if not initialize
         if [ ! -d "sites/${SITE_NAME:-lending.localhost}" ]; then
             log "Site not found, initializing..."
@@ -230,12 +244,6 @@ case "$1" in
         else
             log "Site exists, ensuring it's set as default..."
             bench use "${SITE_NAME:-lending.localhost}"
-        fi
-
-        # Build assets if not present
-        if [ ! -d "sites/assets/frappe/dist" ]; then
-            log "Building assets..."
-            bench build
         fi
 
         # Start supervisor (manages gunicorn, workers, scheduler, socketio)
