@@ -245,6 +245,8 @@ case "$1" in
         else
             log "Site exists, ensuring it's set as default..."
             bench use "${SITE_NAME:-lending.localhost}"
+            log "Clearing cache to pick up new assets..."
+            bench --site "${SITE_NAME:-lending.localhost}" clear-cache || true
         fi
 
         # Start supervisor (manages gunicorn, workers, scheduler, socketio)
